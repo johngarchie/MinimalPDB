@@ -1,10 +1,10 @@
 Revision history for Perl extension MinimalPDB.
 
-0.01  Sat Apr 11 23:16:34 2009
+v0.01  Sat Apr 11 23:16:34 2009
 	- original version; created by h2xs 1.23 with options
 		-b 5.8.0 -AX MinimalPDB
 
-0.02  Mon Jul 13 11:46:13 PDT 2009
+v0.02  Mon Jul 13 11:46:13 PDT 2009
 	- The standard three-letter residue identifiers in ATOM and HETATM
 	  records may now contain four letters, making use of the unused
 	  column after the normal three-letter ATOM code.  This change doesn't
@@ -12,14 +12,14 @@ Revision history for Perl extension MinimalPDB.
 	  parsing and printing of nonstandard ones using four-letter residue
 	  identifiers.
 
-0.03 Mon Jul 27 05:46:12 PDT 2009
+v0.03 Mon Jul 27 05:46:12 PDT 2009
 	- PDB files are required to have 80 characters per line, but many
 	  programs fail to pad lines with spaces to make 80 characters.  PDB
 	  records with fewer than six characters per line can now be handled
 	  "correctly," allowing compatibility with the badly formatted PDB
 	  files produced by some programs.
 
-0.04 Mon Sep 13 14:34:20 PDT 2010
+v0.04 Mon Sep 13 14:34:20 PDT 2010
 	- Some programs, notably scwrl4, include only spaces for
 	  ATOM_TEMPFACTOR fields which should instead be zero if undefined.
 	  This field, when only a space, was converted to an empty string when
@@ -28,3 +28,8 @@ Revision history for Perl extension MinimalPDB.
 	  formline" error.  Now ATOM_TEMPFACTOR fields with only spaces are
 	  converted to the string "0.00", the correct value for when the
 	  temperature factor is undefined.
+
+v0.05 Sun Aug 21 20:59:13 PDT 2011
+	- &parse_pdb_record returns an empty list if given an undefined value,
+	  a previously handled case.  Minor revisions to documentation and
+	  code slightly improve clarity and efficiency.

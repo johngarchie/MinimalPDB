@@ -6,9 +6,7 @@ MinimalPDB - a minimal library for reading and printing PDB files
 
   use MinimalPDB ':all';
 
-  while ( <STDIN> ) {
-      chomp;
-      my @record = parse_pdb_record $_;
+  while ( my @record = parse_pdb_record <STDIN> ) {
       print format_pdb_record @record;
   }
 
@@ -16,23 +14,12 @@ MinimalPDB - a minimal library for reading and printing PDB files
 
 MinimalPDB allows users to easily read and write minimal PDB files.  Minimal
 PDB files are those that use only the following record types: EXPDTA, MODEL,
-ATOM, and ENDMDL.  Other record types can be read and written, but this module
-will not be useful for parsing them.
+ATOM, HETATM, and ENDMDL.  Other record types can be read and written, but
+the record data must be parsed and modified manually.
 
 This module is designed to provide a lightweight, fast interface for parsing
 PDB files.  If you would prefer a more comprehensive module, BioPerl is likely
 a better option for you.
-
-=head1 ABOUT
-
-  Created by:	 John Archie <lt>http://www.jarchie.com/<gt>
-  Created on:    2008-04-12
-
-  SVN Information:
-    $LastChangedBy::                                                    $
-    $LastChangedDate::                                                  $
-    $LastChangedRevision::                                              $
-    $URL::                                                              $
 
 =cut
 
@@ -41,8 +28,18 @@ package MinimalPDB;
 use warnings;
 use strict;
 
-use 5.8.0;
-our $VERSION = 0.04;
+use 5.008;
+our $VERSION = 0.05;
+
+
+=head1 EXPORTS
+
+Nothing is exported by default.  All documented functions and constants may be
+exported.  Most users will want to import everything for convenience, e.g.,
+
+  use MinimalPDB ':all';
+
+=cut
 
 require Exporter;
 our @ISA = qw/Exporter/;
@@ -70,7 +67,7 @@ formatting (fields are marked with an asterick below).
       |         |                     | with optional comment describing
       |         |                     | the sample or experiment.*
 
-* Whitespace is not trimmed.
+* whitespace not trimmed
 
 =cut
 
@@ -94,7 +91,7 @@ use constant {
 use constant MODEL_SERIAL => 1;
 
 
-=head2 ATOM
+=head2 ATOM and HETATM
 
   Idx | Columns | Constant        | Definition
   ----|---------+-----------------+-------------------------
@@ -114,7 +111,7 @@ use constant MODEL_SERIAL => 1;
    13 |  77-78  | ATOM_ELEMENT    | Element symbol, right-justified.
    14 |  79-80  | ATOM_CHARGE     | Charge on the atom.
 
-* Whitespace is not trimmed.
+* whitespace not trimmed
 
 =cut
 
@@ -143,14 +140,14 @@ use constant {
   ----+---------+-------------+-----------
     0 |   1- 6  | RECORD_NAME | "ENDMDL"
 
-=head2 ANY OTHER PDB RECORD
+=head2 OTHER PDB RECORD
 
   Idx | Columns | Constant         | Definition
   ----+---------+------------------+-----------------------------
     0 |   1- 6  | RECORD_NAME      | The unidentified record name.
     1 |   7-80  | OTHER_EVERYTHING | Everything else on the line.*
 
-* Whitespace is not trimmed.
+* whitespace not trimmed
 
 =cut
 
@@ -179,13 +176,19 @@ our %RECOGNIZED_RECORDS = map { $_ => 1 } qw(EXPDTA MODEL ATOM HETATM ENDMDL);
 
 =item B<parse_pdb_record($line)>
 
-splits line and returns an array representing each field in the line.
+splits line and returns an array representing each field in the line;
+returns an empty array if $line is not defined.
 
 =cut
 
 sub parse_pdb_record($) {
     my($line) = @_;
-    my @record;
+
+    my @record;  # array in which to place parsed PDB fields
+
+    # returns an empty array if $line is not defined
+    return @record if not defined $line;
+
 
     # Anatomy of an ATOM record:
     # 
@@ -202,7 +205,7 @@ sub parse_pdb_record($) {
        (....)(.)(....)(.)...                 # resName, chainID, resSeq, iCode
        (........)(........)(........)        # x, y, z
        (?:(......)(?:(......)(?:..........   # occupancy, tempFactor
-       (..)(?:(..))?)?)?)?/x                 # element, charge
+       (..)(?:(..))?)?)?)?/ox                # element, charge
       ) {
         $record[RECORD_NAME]     = trim($1);
         $record[ATOM_SERIAL]     = trim($2);
@@ -230,7 +233,7 @@ sub parse_pdb_record($) {
     # 
     # The string of '#' indicates the field.
     # Strings of '.' indicate unused positions or spaces.
-    elsif($line =~ /^(MODEL )....(....)/) {    # record, serial
+    elsif($line =~ /^(MODEL )....(....)/o) {    # record, serial
         $record[RECORD_NAME]  = trim($1);
         $record[MODEL_SERIAL] = trim($2);
     }
@@ -240,7 +243,7 @@ sub parse_pdb_record($) {
     # ENDMDL..........................................................................
     # 
     # Strings of '.' indicate unused positions or spaces.
-    elsif($line =~ /^(ENDMDL)/) {    # record
+    elsif($line =~ /^(ENDMDL)/o) {    # record
         $record[RECORD_NAME] = trim($1);
     }
 
@@ -252,18 +255,18 @@ sub parse_pdb_record($) {
     # 
     # Strings of '+' and '#' indicate fields.
     # Strings of '.' indicate unused positions or spaces.
-    elsif($line =~ /^(EXPDTA)..(..)(.*)/) {    # record, cont, techniq
+    elsif($line =~ /^(EXPDTA)..(..)(.*)/o) {    # record, cont, techniq
         $record[RECORD_NAME]         = trim($1);
         $record[EXPDTA_CONTINUATION] = trim($2);
         $record[EXPDTA_TECHNIQUE]    = trim($3);
     }
 
     # ...and a catch all for everything we don't recognize
-    elsif($line =~ /^(......)(.*)/) {    # record, everything else
+    elsif($line =~ /^(......)(.*)/o) {    # record, everything else
         $record[RECORD_NAME]      = trim($1);
         $record[OTHER_EVERYTHING] = $2;
     }
-    elsif($line =~ /^(.*)/) {  # and finally, records that are too short
+    elsif($line =~ /^(.*)/o) {  # and finally, records that are too short
         $record[RECORD_NAME]      = trim($1);
         $record[OTHER_EVERYTHING] = "";
     }
@@ -341,15 +344,18 @@ goto return_formatted_record;
     return sprintf "%-80s\n", $^A;
 }
 
+
 =item B<is_atom(@record)>
 
 returns true if @record represents an ATOM or HETATM record
 
 =cut
+
 sub is_atom(\@) {
     return $_[0]->[RECORD_NAME] eq "ATOM" ||
 	   $_[0]->[RECORD_NAME] eq "HETATM";
 }
+
 
 =item B<res_id(@record)>
 
@@ -358,6 +364,7 @@ ATOM_CHAINID, ATOM_RESSEQ, and ATOM_ICODE fields; assumes the input record is
 an atom
 
 =cut
+
 sub res_id(\@) {
     return $_[0]->[ATOM_RESSEQ] . $_[0]->[ATOM_ICODE] . $_[0]->[ATOM_CHAINID];
 }
@@ -373,26 +380,40 @@ sub trim($) {
     my($string) = @_;
 
     if(defined $string) {
-        $string =~ s/^\s+//;
-        $string =~ s/\s+$//;
+        $string =~ s/^\s+//o;
+        $string =~ s/\s+$//o;
     }
 
     return $string;
 }
 
+
 =back
 
-=head1 BUGS
+=head1 SEE ALSO
+
+The PDB Specification (v3.2)
+L<http://www.wwpdb.org/documentation/format32/v3.2.html> and L<MinimalFASTA>
+
+=head1 BUGS AND CAVEATS
 
 &parse_pdb_record does not ensure the correctness of the input file.  The
 behavior is reasonable (i.e., the right columns are returned to the user), but
 no guarantee is provided that the column is a specific type.  For example
-$record[ATOM_X] is not guaranteed to be a number--just the characters
-in the PDB file where the x-coordinate of an ATOM record is stored.
+$record[ATOM_X] is not guaranteed to be a number--just the characters in the
+PDB file where the x-coordinate of an ATOM record is stored.
 
-=head1 SEE ALSO
+=head1 AUTHOR
 
-http://www.wwpdb.org/documentation/format32/v3.2.html
+John Archie L<http://www.jarchie.com/>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2009-2011 by John Archie
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.12.3 or,
+at your option, any later version of Perl 5 you may have available.
 
 =cut
 

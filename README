@@ -1,10 +1,10 @@
-MinimalPDB version 0.04
+MinimalPDB version 0.05
 =======================
 
-This is the fourth release of the MinimalPDB module.  The purpose of this
-module is to allow users to easily work with the most essential PDB record
-types: EXPDTA, REMARK, ATOM, HETATM, MODEL, and ENDMDL.  Other records can be
-read, stored, and reformatted, but this module is not useful for parsing them.
+The purpose of the MinimalPDB module is to allow users to easily parse and
+format the most essential PDB record types.  Currently supported types are
+EXPDTA, REMARK, ATOM, HETATM, MODEL, and ENDMDL.  Other record types can be
+read and formatted, but parsing and altering is tedious.
 
 This module provides a simple, dependency-free interface for handling PDB
 data.  For a feature-rich solution, consider using the Bio::Structure::*
@@ -23,7 +23,7 @@ To install this module type the following:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2009,2010 by John Archie
+Copyright (C) 2009-2011 by John Archie
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.5.0 or,
